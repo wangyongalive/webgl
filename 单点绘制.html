@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>单点绘制</title>
+    <script>
+        let verteShaderSource = `
+        attribute vec4 aPos; // 位置坐标由外部传入
+                void main(){
+                gl_Position = aPos;
+                gl_PointSize = 20.5;
+                }
+            `;
+        let fragmentShaderSource = `
+        precision mediump float;
+        uniform vec4 u_color;
+                void main(){
+                   //  gl_FragColor = vec4(0.0,1.0,1.0,1.0);
+                    gl_FragColor = u_color;
+                }
+            `;
+
+        function main() {
+            let ctx = document.getElementById("example01").getContext("webgl");
+            let program = ctx.createProgram(); // 程序
+            /*创建着色器*/
+            // 着色器初始化
+            let vertexShader = ctx.createShader(ctx.VERTEX_SHADER);
+            let fragmentShader = ctx.createShader(ctx.FRAGMENT_SHADER);
+            /*创建着色器程序*/
+            // 提供数据源
+            ctx.shaderSource(vertexShader, verteShaderSource);
+            ctx.shaderSource(fragmentShader, fragmentShaderSource);
+            // 编译
+            ctx.compileShader(vertexShader);
+            ctx.compileShader(fragmentShader);
+            // 连接
+            ctx.attachShader(program, vertexShader);
+            ctx.attachShader(program, fragmentShader);
+            ctx.linkProgram(program);
+            /*使用着色器*/
+            ctx.useProgram(program);
+
+            let aPosLocation = ctx.getAttribLocation(program, 'aPos');
+            // 为顶点attibute变量赋值  // 齐次坐标系
+            // 坐标-1-->1  0,0位于中间位置
+            ctx.vertexAttrib4f(aPosLocation, 0.0, 0.0, 1.0, 1.0);
+
+            // 为片段着色器uniform变量赋值
+            let colorLocation = ctx.getUniformLocation(program, "u_color");
+
+            if (aPosLocation < 0 || colorLocation < 0) {
+                console.log("failed to get the storage location of a_Position");
+                return;
+            }
+
+            // 绘制
+            ctx.clearColor(1.0, 1.0, .0, 1.0); // 设置背景色
+            ctx.clear(ctx.COLOR_BUFFER_BIT); // 清除color缓存
+            ctx.drawArrays(ctx.POINTS, 0, 1);
+
+
+            /*添加交互*/
+            example01.onmousedown = function (e) {
+                click(e, ctx, example01, aPosLocation);
+            };
+
+            function click(e, gl, canvas, a_Position) {
+                /*坐标转换的代码*/
+                let x = e.clientX;
+                let y = e.clientY;
+                const rect = e.target.getBoundingClientRect();
+
+                x = (x - rect.left - canvas.width / 2) / (canvas.width / 2);
+                y = (canvas.height / 2 - y + rect.top) / (canvas.height / 2);
+                /*坐标转换的代码 结束*/
+                ctx.vertexAttrib4f(a_Position, x, y, 1.0, 1.0);
+                // 设置随机的颜色
+                ctx.uniform4f(colorLocation, Math.random(), Math.random(), Math.random(), 1);
+                // 绘制
+                ctx.clearColor(1.0, 1.0, .0, 1.0); // 设置背景色
+                ctx.clear(ctx.COLOR_BUFFER_BIT); // 清除color缓存
+                ctx.drawArrays(ctx.POINTS, 0, 1);
+
+            }
+        }
+    </script>
+</head>
+<body onload="main()">
+<canvas id="example01" style="border: black 2px solid" height="600" width="600"></canvas>
+</body>
+</html>
